@@ -15,28 +15,19 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-  final String title;
+  MyHomePage({Key key}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
   final _linearGradient = LinearGradient(
       colors: [Color(0xfffc00ff), Color(0xff00dbde)], stops: [0.0, 0.7]);
   final _formKey = GlobalKey<FormState>();
@@ -44,30 +35,170 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Todo> todos = [];
   final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
+  void showTaskDialog(BuildContext context) {
+    var alert = AlertDialog(
+      title: Text('Today\'s list'),
+      content: SizedBox(
+        child: Form(
+          key: _formKey,
+          child: TextFormField(
+            validator: (value) =>
+                value.isEmpty ? 'Entry cannot be empty' : null,
+            cursorColor: Colors.deepPurple,
+            controller: _controller,
+            decoration: InputDecoration(
+                labelText: 'TODO',
+                hintText: 'what to do today',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(10))),
+                prefixIcon: Icon(Icons.work)),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () {
+              setState(() {
+                if (_formKey.currentState.validate()) {
+                  todos.add(Todo(title: _controller.text, isDone: false));
+                  _controller.clear();
+                  Navigator.pop(context);
+                }
+              });
+            },
+            child: Text('Add'))
+      ],
+    );
+    showDialog(context: context, builder: (BuildContext builder) => alert);
+  }
+
   @override
   Widget build(BuildContext context) {
+    TimeOfDay timeOfDay = TimeOfDay.fromDateTime(DateTime.now());
+    String time = timeOfDay.format(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text('What to Do!'),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(gradient: _linearGradient),
+        ),
+        leading: Icon(Icons.work),
+        elevation: 0.0,
       ),
-      body: Center(
+      backgroundColor: Colors.deepPurple,
+      body: Container(
+        decoration: BoxDecoration(gradient: _linearGradient),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+            SizedBox(
+              height: 70,
+              child: Column(
+                children: [
+                  Text(
+                    time,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    date,
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  )
+                ],
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
+            Expanded(
+                child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(50),
+                  topLeft: Radius.circular(50),
+                ),
+                color: Color(0xffececec),
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(top: 30, left: 10, right: 10),
+                child: ListView.builder(
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Color(0xffececec),
+                          boxShadow: [
+                            BoxShadow(
+                                offset: Offset(10, 10),
+                                color: Colors.black38,
+                                blurRadius: 20),
+                            BoxShadow(
+                                offset: Offset(-10, -10),
+                                color: Colors.white.withOpacity(0.85),
+                                blurRadius: 20),
+                          ],
+                        ),
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.arrow_right,
+                            color: Colors.blue,
+                          ),
+                          title: Text(
+                            todos[index].title,
+                            style: TextStyle(
+                                decoration: todos[index].isDone
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none),
+                          ),
+                          trailing: ButtonBar(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Tooltip(
+                                  message: 'Done',
+                                  child: IconButton(
+                                      icon: Icon(
+                                        Icons.check_box,
+                                        color: todos[index].isDone
+                                            ? Colors.green
+                                            : Colors.blue,
+                                      ),
+                                      onPressed: () {
+                                        setState(() => todos[index].isDone =
+                                        !todos[index].isDone);
+                                      })),
+                              Tooltip(
+                                  message: 'Delete',
+                                  child: IconButton(
+                                      icon: Icon(
+                                        Icons.delete,
+                                        color: Colors.red
+                                      ),
+                                      onPressed: () {
+                                        setState(() => todos.removeAt(index));
+                                      })),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  itemCount: todos.length,
+                ),
+              ),
+            ))
           ],
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
+        onPressed: () {
+          showTaskDialog(context);
+        },
+        tooltip: 'Add item to ToDo list',
         label: Text('Add'),
+        backgroundColor: Color(0xfffc00ff),
+        icon: Icon(Icons.add),
       ),
     );
   }
