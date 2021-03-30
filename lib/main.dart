@@ -1,9 +1,13 @@
+// import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:todo_apps_v2/todo_model.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -15,19 +19,14 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(),
+      home: NewMyHomePage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key}) : super(key: key);
+final todosProvider = ChangeNotifierProvider((ref) => TodosNotifier());
 
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
+class NewMyHomePage extends HookWidget {
   final _linearGradient = LinearGradient(
       colors: [Color(0xfffc00ff), Color(0xff00dbde)], stops: [0.0, 0.7]);
   final _formKey = GlobalKey<FormState>();
@@ -35,45 +34,10 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Todo> todos = [];
   final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-  void showTaskDialog(BuildContext context) {
-    var alert = AlertDialog(
-      title: Text('Today\'s list'),
-      content: SizedBox(
-        child: Form(
-          key: _formKey,
-          child: TextFormField(
-            validator: (value) =>
-                value.isEmpty ? 'Entry cannot be empty' : null,
-            cursorColor: Colors.deepPurple,
-            controller: _controller,
-            decoration: InputDecoration(
-                labelText: 'TODO',
-                hintText: 'what to do today',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(10))),
-                prefixIcon: Icon(Icons.work)),
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () {
-              setState(() {
-                if (_formKey.currentState.validate()) {
-                  todos.add(Todo(title: _controller.text, isDone: false));
-                  _controller.clear();
-                  Navigator.pop(context);
-                }
-              });
-            },
-            child: Text('Add'))
-      ],
-    );
-    showDialog(context: context, builder: (BuildContext builder) => alert);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final List<Todo> todos = useProvider(todosProvider).todos;
+
     TimeOfDay timeOfDay = TimeOfDay.fromDateTime(DateTime.now());
     String time = timeOfDay.format(context);
     return Scaffold(
@@ -164,18 +128,19 @@ class _MyHomePageState extends State<MyHomePage> {
                                             : Colors.blue,
                                       ),
                                       onPressed: () {
-                                        setState(() => todos[index].isDone =
-                                        !todos[index].isDone);
+                                        context
+                                            .read(todosProvider)
+                                            .switchDone(index);
                                       })),
                               Tooltip(
                                   message: 'Delete',
                                   child: IconButton(
-                                      icon: Icon(
-                                        Icons.delete,
-                                        color: Colors.red
-                                      ),
+                                      icon:
+                                          Icon(Icons.delete, color: Colors.red),
                                       onPressed: () {
-                                        setState(() => todos.removeAt(index));
+                                        context
+                                            .read(todosProvider)
+                                            .removeTodo(index);
                                       })),
                             ],
                           ),
@@ -201,5 +166,40 @@ class _MyHomePageState extends State<MyHomePage> {
         icon: Icon(Icons.add),
       ),
     );
+  }
+
+  void showTaskDialog(BuildContext context) {
+    var alert = AlertDialog(
+      title: Text('Today\'s list'),
+      content: SizedBox(
+        child: Form(
+          key: _formKey,
+          child: TextFormField(
+            validator: (value) =>
+                value.isEmpty ? 'Entry cannot be empty' : null,
+            cursorColor: Colors.deepPurple,
+            controller: _controller,
+            decoration: InputDecoration(
+                labelText: 'TODO',
+                hintText: 'what to do today',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(10))),
+                prefixIcon: Icon(Icons.work)),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () {
+              if (_formKey.currentState.validate()) {
+                context.read(todosProvider).addTodo(Todo(title: _controller.text, isDone: false));
+                _controller.clear();
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Add'))
+      ],
+    );
+    showDialog(context: context, builder: (BuildContext builder) => alert);
   }
 }
